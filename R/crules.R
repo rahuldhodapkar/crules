@@ -90,13 +90,7 @@ GenerateIncidenceMatrixPercentile <- function(
     percentile.cutoff=0.8) {
     ########################
 
-    pb <- txtProgressBar(min = 0,
-        label = "Generating incidence matrix",
-        max = ncol(x),
-        style = 3)
-
     ordered.val.num <- floor(percentile.cutoff * ncol(x))
-
     pbmclapply(1:ncol(x), function(i) {
         if((x@p[i+1]) == x@p[i]) {
             return() #because column has no positive values
