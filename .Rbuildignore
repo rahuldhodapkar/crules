@@ -3,3 +3,7 @@ Makefile
 
 # heavy datasets (to be loaded externally)
 data/monocytes.RData
+data/pbmc.RData
+
+# code to run vignettes as interactive integrated testing
+raw_vignettes
