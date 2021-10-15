@@ -17,6 +17,7 @@ LazyData: true
 Imports:
     Matrix,
     pbmcapply,
+    methods,
     arules
 Suggests:
     testthat

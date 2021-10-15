@@ -14,18 +14,6 @@
 #     You should have received a copy of the GNU Affero General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#' Identity function to test package configuration
-#'
-#' @param dummy a value to return
-#'
-#' @return the dummy value
-#'
-#' @rdname Identity
-#' @export Identity
-#'
-Identity <- function(dummy) {
-    return(dummy)
-}
 
 #' Create incidence matrix from dataset, wrapper function to allow for simpler
 #' user interaction to various means of generating incidence matrix.
@@ -115,4 +103,35 @@ GenerateIncidenceMatrixPercentile <- function(
     })
 
     return(x)
+}
+
+#' Generate representation of rule hypergraph from which to derive
+#' interestingness measure for rules in the style of CONFIGV
+#' (Santolucito et. al, OOPSLA 2017)
+#'
+#' @param rules a rules output object from arules apriori or eclat
+#'
+#' @return a vector of length equal to the number of rules specifying 
+#'         a rank score by hypergraph degree as defined in
+#'         (Santolucito et. al, OOPSLA 2017)
+#'
+#' @importFrom arules items
+#' @importFrom Matrix rowSums
+#' @importFrom Matrix colSums
+#' @importFrom methods as
+#'
+#' @rdname RankRulesHypergraph
+#' @export RankRulesHypergraph
+#'
+RankRulesHypergraph <- function(rules) {
+    items <- items(rules)
+    items.mat <- as(items, 'ngCMatrix')
+    items.mat <- as(items.mat, 'dgCMatrix')
+
+    deg <- rowSums(items.mat)
+    num.elems.per.rule <- colSums(items.mat)
+
+    deg.weighted.rules <- as.vector(deg %*% items.mat)
+
+    return(deg.weighted.rules / num.elems.per.rule)
 }

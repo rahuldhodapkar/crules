@@ -20,6 +20,3 @@ library(crules)
 test_that("Test that the testing system is functional", {
   expect_equal(1, 1)
 })
-test_that("Exports functional", {
-  expect_equal(Identity(1), 1)
-})

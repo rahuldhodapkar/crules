@@ -24,3 +24,15 @@
 #
 # @source \url{https://satijalab.org/seurat/articles/pbmc3k_tutorial.html}
 # "monocytes"
+
+
+# Single-cell RNA sequencing data for all cells from peripheral blood
+# NOTE: NOT exported, and therefore not formally documented
+#
+# A Seurat 4.0.0 object containing pre-processed pbmcs for further evaluation
+# within the crules framework
+#
+# @format A Seurat object named "monocytes" containing two populations: "CD14+ Mono" and "FCGR3A+ Mono"
+#
+# @source \url{https://satijalab.org/seurat/articles/pbmc3k_tutorial.html}
+# "pbmc"
