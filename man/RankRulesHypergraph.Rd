@@ -2,11 +2,14 @@
 % Please edit documentation in R/crules.R
 \name{RankRulesHypergraph}
 \alias{RankRulesHypergraph}
+\alias{LearnFunctionalRegulons}
 \title{Generate representation of rule hypergraph from which to derive
 interestingness measure for rules in the style of CONFIGV
 (Santolucito et. al, OOPSLA 2017)}
 \usage{
 RankRulesHypergraph(rules)
+
+LearnFunctionalRegulons(rules)
 }
 \arguments{
 \item{rules}{a rules output object from arules apriori or eclat}
@@ -15,9 +18,13 @@ RankRulesHypergraph(rules)
 a vector of length equal to the number of rules specifying 
         a rank score by hypergraph degree as defined in
         (Santolucito et. al, OOPSLA 2017)
+
+a communities object containing
 }
 \description{
 Generate representation of rule hypergraph from which to derive
 interestingness measure for rules in the style of CONFIGV
 (Santolucito et. al, OOPSLA 2017)
+
+Learn functional regulons from selected association rules on gene set
 }

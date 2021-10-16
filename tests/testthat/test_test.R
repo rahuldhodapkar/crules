@@ -14,7 +14,7 @@
 #     You should have received a copy of the GNU Affero General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-context("TestTest")
+context("Test testing infrastructure")
 library(crules)
 
 test_that("Test that the testing system is functional", {

@@ -18,7 +18,8 @@ Imports:
     Matrix,
     pbmcapply,
     methods,
-    arules
+    arules,
+    stats
 Suggests:
     testthat
 RoxygenNote: 7.1.2

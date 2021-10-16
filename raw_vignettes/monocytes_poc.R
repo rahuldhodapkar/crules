@@ -23,7 +23,7 @@ load('./data/monocytes.RData')
 x <- Seurat::GetAssayData(object = monocytes, slot='counts')
 x <- t(x)
 
-y <- GenerateIncidenceMatrix(x, method='nonzero')
+y <- GenerateIncidenceMatrix(x, method='percentile', percentile.cutoff=0.99)
 
 # each ROW should be a CELL, corresponding to a TRANSACTION or ITEMSET.
 
@@ -32,7 +32,7 @@ txs <- as(t(y1), 'transactions')
 
 rules <- apriori(txs, 
     parameter=list(
-        supp=0.5, 
+        supp=0.1, 
         conf=0.8,
         maxlen=3),
     control=list(
@@ -44,8 +44,20 @@ hypergraph.rank <- RankRulesHypergraph(rules)
 # add hypergraph rank as interestingness measure
 quality(rules)$hgrank <- hypergraph.rank
 
-inspect(head(sort(rules, by='hgrank', decreasing=FALSE), n=100))
-
+inspect(head(sort(rules, by='hgrank', decreasing=FALSE), n=10))
 inspect(head(sort(rules, by='lift', decreasing=TRUE), n=10))
 
 print("mined association rules from all monocytes")
+
+# 
+items <- items(rules)
+items.mat <- as(items, 'ngCMatrix')
+items.mat <- as(items.mat, 'dgCMatrix')
+
+weighted.adjacency.matrix <- items.mat %*% t(items.mat)
+communities <- DetectOverlappingCommunitiesSLPAw(
+    weighted.adjacency.matrix, 
+    num.iters=20, 
+    rand.seed=42,
+    community.threshold=0)
+#=======
