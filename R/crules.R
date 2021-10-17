@@ -267,6 +267,77 @@ DetectOverlappingCommunitiesSLPAw <- function(
 }
 
 
+#' Compare communities list of lists to *.gmt symbol table from MSigDB and
+#' generate a concordance score based on the membership hamming distance
+#' to closest gene set which *covers* the community.
+#'
+#' @param communities a list of lists containing symbols for gene communities
+#' @param gmt.filename a filename for gmt against which to test communities
+#' @param missing.in.gmt.penalty per-element penalty for each gene missing in 
+#'         the target gene set from gmt file.
+#' @param extra.in.gmt.penalty per-element penalty for each gene extra in 
+#'         the target gene set from gmt file (not present in tested community).
+#'
+#' @return a dataframe containing the penalty weights for each community,
+#'         as well as the name of the closest gene set in the provided GMT.
+#'
+#' @importFrom GSA GSA.read.gmt
+#' @importFrom utils txtProgressBar
+#' @importFrom utils setTxtProgressBar
+#'
+#' @rdname CalcCommPenaltyFromGMT
+#' @export CalcCommPenaltyFromGMT
+#'
+CalcCommPenaltyFromGMT <- function(
+    communities, 
+    gmt.filename,
+    missing.in.gmt.penalty=1,
+    extra.in.gmt.penalty=0.5) {
+    ###########################
+    gmt.data <- GSA.read.gmt(gmt.filename)
+
+    best.penalties <- c()
+    best.matched.genesets <- c()
+
+    message('Calculating Community Penalties')
+    pb <- txtProgressBar(min = 0,
+        label = "Running iterative label propagation",
+        max = length(communities),
+        style = 3)
+
+    for (c.ix in 1:length(communities)) {
+        c <- communities[[c.ix]]
+
+        min.penalty <- Inf
+        min.penalty.gs.name <- NULL
+        for (gs.ix in 1:length(gmt.data$genesets)) {
+            gs <- gmt.data$genesets[[gs.ix]]
+            gs.name <- gmt.data$geneset.names[[gs.ix]]
+
+            penalty <- (
+                length(setdiff(c, gs)) * missing.in.gmt.penalty
+                + length(setdiff(gs, c)) * extra.in.gmt.penalty
+            )
+            if (penalty < min.penalty) {
+                min.penalty <- penalty
+                min.penalty.gs.name <- gs.name
+            }
+        }
+
+        best.penalties <- c(best.penalties, min.penalty)
+        best.matched.genesets <- c(best.matched.genesets, min.penalty.gs.name)
+
+        setTxtProgressBar(pb, c.ix)
+    }
+
+    return (data.frame(
+        community.names=names(communities),
+        best.penalties=best.penalties,
+        best.matched.genesets=best.matched.genesets
+    ))
+}
+
+
 #' Internal LISTENER function to be used in SLPAw algorithm.
 #'
 #' @param x a vector of values
@@ -339,3 +410,4 @@ ListenerProbWeighted <- function(x, weights, ...) {
 
     return(x[[sample.int(n=length(x), size=1, prob=weights)]])
 }
+

@@ -61,3 +61,17 @@ communities <- DetectOverlappingCommunitiesSLPAw(
     rand.seed=42,
     community.threshold=0)
 #=======
+communities.bak <- communities
+
+ixs.to.remove <- c()
+for (i in 1:length(communities)) {
+    if (length(communities[[i]]) < 2) {
+        ixs.to.remove <- c(ixs.to.remove, i)
+    }
+}
+if(length(ixs.to.remove) > 0) {
+    communities <- communities[- ixs.to.remove]
+}
+
+communities.arl <- communities
+

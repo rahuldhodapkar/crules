@@ -19,7 +19,8 @@ Imports:
     pbmcapply,
     methods,
     arules,
-    stats
+    stats,
+    GSA
 Suggests:
     testthat
 RoxygenNote: 7.1.2

@@ -4,6 +4,7 @@ Makefile
 # heavy datasets (to be loaded externally)
 data/monocytes.RData
 data/pbmc.RData
+data/c2.all.v7.4.symbols.gmt
 
 # code to run vignettes as interactive integrated testing
 raw_vignettes
