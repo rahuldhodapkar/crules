@@ -268,15 +268,10 @@ DetectOverlappingCommunitiesSLPAw <- function(
 
 
 #' Compare communities list of lists to *.gmt symbol table from MSigDB and
-#' generate a concordance score based on the membership hamming distance
-#' to closest gene set which *covers* the community.
+#' generate a concordance score based on the Jaccard dissimilarity index.
 #'
 #' @param communities a list of lists containing symbols for gene communities
 #' @param gmt.filename a filename for gmt against which to test communities
-#' @param missing.in.gmt.penalty per-element penalty for each gene missing in 
-#'         the target gene set from gmt file.
-#' @param extra.in.gmt.penalty per-element penalty for each gene extra in 
-#'         the target gene set from gmt file (not present in tested community).
 #'
 #' @return a dataframe containing the penalty weights for each community,
 #'         as well as the name of the closest gene set in the provided GMT.
@@ -290,9 +285,7 @@ DetectOverlappingCommunitiesSLPAw <- function(
 #'
 CalcCommPenaltyFromGMT <- function(
     communities, 
-    gmt.filename,
-    missing.in.gmt.penalty=1,
-    extra.in.gmt.penalty=0.5) {
+    gmt.filename) {
     ###########################
     gmt.data <- GSA.read.gmt(gmt.filename)
 
@@ -314,10 +307,10 @@ CalcCommPenaltyFromGMT <- function(
             gs <- gmt.data$genesets[[gs.ix]]
             gs.name <- gmt.data$geneset.names[[gs.ix]]
 
-            penalty <- (
-                length(setdiff(c, gs)) * missing.in.gmt.penalty
-                + length(setdiff(gs, c)) * extra.in.gmt.penalty
+            penalty <-  1 - (
+                length(intersect(c, gs)) / length(union(c, gs))
             )
+
             if (penalty < min.penalty) {
                 min.penalty <- penalty
                 min.penalty.gs.name <- gs.name
@@ -411,3 +404,27 @@ ListenerProbWeighted <- function(x, weights, ...) {
     return(x[[sample.int(n=length(x), size=1, prob=weights)]])
 }
 
+#' Small helper function to trim small communities from list of lists
+#'
+#' @param communities a vector of values
+#' @param min.community.size an optional set of weights to accompany the values
+#'
+#' @return a pruned list of lists with only those of size greater than
+#'         `min.community.size`.
+#'
+#' @rdname TrimSmallComms
+#' @export TrimSmallComms
+#'
+TrimSmallComms <- function(communities, min.community.size=2) {
+    ixs.to.remove <- c()
+    for (i in 1:length(communities)) {
+        if (length(communities[[i]]) < min.community.size) {
+            ixs.to.remove <- c(ixs.to.remove, i)
+        }
+    }
+    if(length(ixs.to.remove) > 0) {
+        communities <- communities[- ixs.to.remove]
+    }
+
+    return(communities)
+}

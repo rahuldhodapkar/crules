@@ -3,26 +3,14 @@
 \name{CalcCommPenaltyFromGMT}
 \alias{CalcCommPenaltyFromGMT}
 \title{Compare communities list of lists to *.gmt symbol table from MSigDB and
-generate a concordance score based on the membership hamming distance
-to closest gene set which *covers* the community.}
+generate a concordance score based on the Jaccard dissimilarity index.}
 \usage{
-CalcCommPenaltyFromGMT(
-  communities,
-  gmt.filename,
-  missing.in.gmt.penalty = 1,
-  extra.in.gmt.penalty = 0.5
-)
+CalcCommPenaltyFromGMT(communities, gmt.filename)
 }
 \arguments{
 \item{communities}{a list of lists containing symbols for gene communities}
 
 \item{gmt.filename}{a filename for gmt against which to test communities}
-
-\item{missing.in.gmt.penalty}{per-element penalty for each gene missing in 
-the target gene set from gmt file.}
-
-\item{extra.in.gmt.penalty}{per-element penalty for each gene extra in 
-the target gene set from gmt file (not present in tested community).}
 }
 \value{
 a dataframe containing the penalty weights for each community,
@@ -30,6 +18,5 @@ a dataframe containing the penalty weights for each community,
 }
 \description{
 Compare communities list of lists to *.gmt symbol table from MSigDB and
-generate a concordance score based on the membership hamming distance
-to closest gene set which *covers* the community.
+generate a concordance score based on the Jaccard dissimilarity index.
 }

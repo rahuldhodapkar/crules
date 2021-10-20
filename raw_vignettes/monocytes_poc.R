@@ -50,6 +50,8 @@ inspect(head(sort(rules, by='lift', decreasing=TRUE), n=10))
 print("mined association rules from all monocytes")
 
 # 
+
+
 items <- items(rules)
 items.mat <- as(items, 'ngCMatrix')
 items.mat <- as(items.mat, 'dgCMatrix')
@@ -60,18 +62,15 @@ communities <- DetectOverlappingCommunitiesSLPAw(
     num.iters=20, 
     rand.seed=42,
     community.threshold=0)
-#=======
-communities.bak <- communities
-
-ixs.to.remove <- c()
-for (i in 1:length(communities)) {
-    if (length(communities[[i]]) < 2) {
-        ixs.to.remove <- c(ixs.to.remove, i)
-    }
-}
-if(length(ixs.to.remove) > 0) {
-    communities <- communities[- ixs.to.remove]
-}
 
 communities.arl <- communities
 
+#========
+# repeat adj matrix from original cell data
+#
+weighted.adjacency.matrix <- t(x) %*% x
+communities <- DetectOverlappingCommunitiesSLPAw(
+    weighted.adjacency.matrix, 
+    num.iters=20, 
+    rand.seed=42,
+    community.threshold=0)
