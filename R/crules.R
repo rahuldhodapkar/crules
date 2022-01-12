@@ -428,3 +428,211 @@ TrimSmallComms <- function(communities, min.community.size=2) {
 
     return(communities)
 }
+
+#' ngCmatric-specific manipulation, internal helper function
+#' to weight values of matrix by a "confidence" level obtained
+#' from the association rule learning stage. Confidence may be
+#' replaced with any other metric on the rule space
+#'
+#' @param p the p vector from an ngCMatrix
+#' @param vals the vector of values to replace per column:
+#'              e.g. confidence
+#'
+#' @return a vector which may be assigned to the x slot of 
+#'          the ngCMatrix used for parameter "p".
+#'
+NewValsFromPVector <- function(p, vals) {
+    reps <- c()
+    for (i in 2:length(p)) {
+        reps <- c(reps, 
+            rep(vals[[i-1]], p[[i]] - p[[i-1]])
+        )
+    }
+    return(reps)
+}
+
+#'
+#' @param M a dgCMatrix to be column scaled.
+#'
+#' @return column-scaled matrix M.
+#'
+ColumnScaleSparseMatrix <- function(M) {
+    if(!'dgCMatrix' %in% class(M)) {
+        message('WARN: ColumnScaleSparseMatrix - non-dgCMatrix passed for scaling')
+    }
+    M@x <- M@x / rep.int(colSums(M), diff(M@p))
+    return(M)
+}
+
+#'
+#' @param M a dgCMatrix to be row scaled.
+#'
+#' @return column-scaled matrix M.
+#'
+RowScaleSparseMatrix <- function(M) {
+    if(!'dgCMatrix' %in% class(M)) {
+        message('WARN: ColumnScaleSparseMatrix - non-dgCMatrix passed for scaling')
+    }
+    return(t(ColumnScaleSparseMatrix(t(M))))
+}
+
+#' Simulate the cell states using a walk matrix generated
+#' from the association rules, re-normalizing the matrix at
+#' each step.
+#'
+#' @param x a cell (row) by gene (column) ngCMatrix of expression
+#'           data to perform a walk along
+#' @param W the row-normalized walk matrix
+#' @param nsteps the total number of time steps to run the simulation
+#'
+#' @return a new x' of the original matrix after nsteps iterations.
+#'
+WalkCellState <- function(x, W, nsteps=5) {
+    xprime <- x
+    for (i in 1:nsteps) {
+        xprime <- xprime %*% W
+    }
+    return(xprime)
+}
+
+#' Generate association rules from 
+#'
+#' @param exp.mat a cell (row) by gene (column) expression matrix
+#'                 of class 'ngCMatrix'
+#'
+#' @return a rules object generated from the single cell data
+#'
+GenerateCellularRules <- function(
+    exp.mat,
+    min.support = 0, min.conf = 0.25, max.rule.len = 4) {
+    # non-tunable params
+    GEN.INCIDENCE.MATRIX.PERCENTILE.CUTOFF <- 0.99
+
+    # function body
+    y <- GenerateIncidenceMatrix(
+        exp.mat, method='percentile', 
+        percentile.cutoff=GEN.INCIDENCE.MATRIX.PERCENTILE.CUTOFF)
+    y1 <- as(t(y), 'ngCMatrix')
+    txs <- as(y1, 'transactions')
+
+    rules <- apriori(txs, 
+        parameter=list(
+            supp=min.support, 
+            conf=min.conf,
+            maxlen=max.rule.len),
+        control=list(
+            memopt=TRUE,
+            load=FALSE
+        ))
+    return(rules)
+}
+
+#' Predict cell state transition graph using data simulated using
+#' association rules, weighted by rule confidence.
+#'
+#' @param exp.mat a cell (row) by gene (column) expression matrix
+#'                 of class 'ngCMatrix'
+#'
+#' @return a matrix of identities with transition probabilities
+#'
+#' @importFrom arules apriori
+#'
+#' @rdname ForecastStates
+#' @export ForecastStates
+#'
+ForecastStates <- function(
+        exp.mat,
+        rules,
+        tau = 0.2,
+        n.sim.steps = 5
+    ) {
+    L <- as(rules@lhs@data, 'dgCMatrix')
+    R <- as(rules@rhs@data, 'dgCMatrix')
+    conf <- rules@quality$confidence
+    R@x <- NewValsFromPVector(R@p, conf)
+
+    T <- RowScaleSparseMatrix(L %*% t(R))
+    I <- as(Diagonal(nrow(L)), 'dgCMatrix')
+    W <- RowScaleSparseMatrix(tau*T + (1-tau)*I)
+    x <- RowScaleSparseMatrix(exp.mat)
+
+    xprime <- WalkCellState(x, W, nsteps=n.sim.steps)
+
+    return(xprime)
+}
+
+#' Project a normalized simulated vector of cell expression
+#' onto UMAP space given an normalized expression matrix.
+#' If these vectors are large (large number of genes), PCA
+#' may be performed on both `exp.mat` and `x.prime` to reduce
+#' computational load.
+#'
+#' @param ids a vector of cell cluster ids to generate 
+#'             transition probabilities
+#'
+#' @importFrom umap umap
+#'
+#' @return a data frame with umap coordinates for the cells
+#'          and simulated states (x1,y1) -> (x2,y2) where each
+#'          row corresponds to a cell in the original dataset.
+#'
+ProjectSimUMAP <- function(
+        exp.mat,
+        x.prime
+    ) {
+    orig.umap <- umap(as.matrix(exp.mat))
+    pred.umap <- predict(orig.umap, as.matrix(x.prime))
+
+    df <- data.frame(
+        x1 = orig.umap$layout[,1],
+        y1 = orig.umap$layout[,2],
+        x2 = pred.umap[,1],
+        y2 = pred.umap[,2]
+    )
+
+    return(df)
+}
+
+#'
+#' @param ids a vector of cell cluster ids to generate 
+#'             transition probabilities
+#'
+#' @importFrom FNN get.knnx
+#' @importFrom hashmap hashmap
+#'
+#'
+GenerateMarkovChain <- function(
+        ids,
+        exp.mat,
+        x.prime
+    ) {
+    knn.G <- get.knnx(exp.mat, x.prime, algorithm='kd_tree')
+    ix2ident <- hashmap(
+        1:length(ids), 
+        ids)
+    
+    vals <- matrix(
+        ix2ident[[knn.G$nn.index[,2:10]]],
+        nrow=nrow(knn.G$nn.index)
+    )
+    rownames(vals) <- ids
+    trans.mat <- matrix(
+        0, 
+        nrow=length(unique(ids)),
+        ncol=length(unique(ids)),
+        dimnames=rep(list(unique(ids)), 2))
+    trans.mat
+
+    getmode <- function(v) {
+        uniqv <- unique(v)
+        uniqv[which.max(tabulate(match(v, uniqv)))]
+    }
+
+    for (i in 1:nrow(vals)) {
+        t1 <- rownames(vals)[[i]]
+        t2 <- getmode(vals[i,])
+        trans.mat[[t1,t2]] <- trans.mat[[t1,t2]] + 1
+    }
+
+    return(trans.mat)
+}
