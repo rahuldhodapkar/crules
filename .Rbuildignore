@@ -6,6 +6,8 @@ data/monocytes.RData
 data/pbmc.RData
 data/c2.all.v7.4.symbols.gmt
 data/exp_raw_monocyte_communities.rds
+data/10X43_1.loom
+data/10x
 
 # code to run vignettes as interactive integrated testing
 raw_vignettes

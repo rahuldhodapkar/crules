@@ -20,7 +20,12 @@ Imports:
     methods,
     arules,
     stats,
-    GSA
+    GSA,
+    nnet,
+    markovchain,
+    FNN,
+    hashmap,
+    umap
 Suggests:
     testthat
 RoxygenNote: 7.1.2

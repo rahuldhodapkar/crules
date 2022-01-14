@@ -495,10 +495,15 @@ WalkCellState <- function(x, W, nsteps=5) {
     return(xprime)
 }
 
-#' Generate association rules from 
+#' Generate association rules from original data E^0
 #'
 #' @param exp.mat a cell (row) by gene (column) expression matrix
 #'                 of class 'ngCMatrix'
+#' @param min.support default 0, passed to apriori algorithm
+#' @param min.conf default 0.25, passed to apriori algorithm
+#' @param max.rule.len default 4, passed to apriori algorithm
+#'
+#' @importFrom arules apriori
 #'
 #' @return a rules object generated from the single cell data
 #'
@@ -532,10 +537,14 @@ GenerateCellularRules <- function(
 #'
 #' @param exp.mat a cell (row) by gene (column) expression matrix
 #'                 of class 'ngCMatrix'
+#' @param rules a rules object
+#' @param tau time constant for simulation
+#' @param n.sim.steps total number of simulation steps to run.
 #'
-#' @return a matrix of identities with transition probabilities
+#' @return a new expression matrix E^t after `n.sim.steps` simulation
+#'          steps with time constant tau
 #'
-#' @importFrom arules apriori
+#' @importFrom Matrix Diagonal
 #'
 #' @rdname ForecastStates
 #' @export ForecastStates
@@ -567,10 +576,11 @@ ForecastStates <- function(
 #' may be performed on both `exp.mat` and `x.prime` to reduce
 #' computational load.
 #'
-#' @param ids a vector of cell cluster ids to generate 
-#'             transition probabilities
+#' @param exp.mat original expression data (E^0)
+#' @param x.prime predicted expression data (E^t)
 #'
 #' @importFrom umap umap
+#' @importFrom stats predict
 #'
 #' @return a data frame with umap coordinates for the cells
 #'          and simulated states (x1,y1) -> (x2,y2) where each
@@ -593,14 +603,18 @@ ProjectSimUMAP <- function(
     return(df)
 }
 
+#' Calculate new id vector (sigma)
 #'
 #' @param ids a vector of cell cluster ids to generate 
 #'             transition probabilities
+#' @param exp.mat original expression data (E^0)
+#' @param x.prime predicted expression data (E^t)
 #'
 #' @importFrom FNN get.knnx
 #' @importFrom hashmap hashmap
+#' @importFrom nnet which.is.max
 #'
-#'
+#' @return vector of new ids
 GenerateMarkovChain <- function(
         ids,
         exp.mat,
@@ -616,23 +630,12 @@ GenerateMarkovChain <- function(
         nrow=nrow(knn.G$nn.index)
     )
     rownames(vals) <- ids
-    trans.mat <- matrix(
-        0, 
-        nrow=length(unique(ids)),
-        ncol=length(unique(ids)),
-        dimnames=rep(list(unique(ids)), 2))
-    trans.mat
 
     getmode <- function(v) {
         uniqv <- unique(v)
-        uniqv[which.max(tabulate(match(v, uniqv)))]
+        uniqv[which.is.max(tabulate(match(v, uniqv)))]
     }
 
-    for (i in 1:nrow(vals)) {
-        t1 <- rownames(vals)[[i]]
-        t2 <- getmode(vals[i,])
-        trans.mat[[t1,t2]] <- trans.mat[[t1,t2]] + 1
-    }
-
-    return(trans.mat)
+    sigma <- sapply(1:nrow(vals), function(i){getmode(vals[i,])})
+    return(sigma)
 }
