@@ -105,7 +105,7 @@ GenerateIncidenceMatrixPercentile <- function(
     }))
 
     x@x <- updates
-    return(drop0(x))
+    return(as(drop0(x), 'dgCMatrix'))
 }
 
 #' Generate representation of rule hypergraph from which to derive
@@ -147,6 +147,7 @@ RankRulesHypergraph <- function(rules) {
 #'
 #' @importFrom arules items
 #' @importFrom methods as
+#' @importFrom Matrix t
 #'
 #' @rdname RankRulesHypergraph
 #' @export RankRulesHypergraph
@@ -156,7 +157,7 @@ LearnFunctionalRegulons <- function(rules) {
     items.mat <- as(items, 'ngCMatrix')
     items.mat <- as(items.mat, 'dgCMatrix')
 
-    weighted.adjacency.matrix <- items.mat %*% t(items.mat)
+    weighted.adjacency.matrix <- items.mat %*% Matrix::t(items.mat)
 
     # ***TODO***
     return ()
@@ -451,10 +452,14 @@ NewValsFromPVector <- function(p, vals) {
     return(reps)
 }
 
+#' Fast implementation to column scale a dgCMatrix to sum to 1
 #'
 #' @param M a dgCMatrix to be column scaled.
 #'
 #' @return column-scaled matrix M.
+#'
+#' @rdname ColumnScaleSparseMatrix
+#' @export ColumnScaleSparseMatrix
 #'
 ColumnScaleSparseMatrix <- function(M) {
     if(!'dgCMatrix' %in% class(M)) {
@@ -464,16 +469,22 @@ ColumnScaleSparseMatrix <- function(M) {
     return(M)
 }
 
+#' Fast implementation to row scale a dgCMatrix to sum to 1
 #'
 #' @param M a dgCMatrix to be row scaled.
 #'
+#' @importFrom Matrix t
+#'
 #' @return column-scaled matrix M.
+#'
+#' @rdname RowScaleSparseMatrix
+#' @export RowScaleSparseMatrix
 #'
 RowScaleSparseMatrix <- function(M) {
     if(!'dgCMatrix' %in% class(M)) {
         message('WARN: ColumnScaleSparseMatrix - non-dgCMatrix passed for scaling')
     }
-    return(t(ColumnScaleSparseMatrix(t(M))))
+    return(Matrix::t(ColumnScaleSparseMatrix(Matrix::t(M))))
 }
 
 #' Simulate the cell states using a walk matrix generated
@@ -504,8 +515,12 @@ WalkCellState <- function(x, W, nsteps=5) {
 #' @param max.rule.len default 4, passed to apriori algorithm
 #'
 #' @importFrom arules apriori
+#' @importFrom Matrix t
 #'
 #' @return a rules object generated from the single cell data
+#'
+#' @rdname GenerateCellularRules
+#' @export GenerateCellularRules
 #'
 GenerateCellularRules <- function(
     exp.mat,
@@ -517,7 +532,7 @@ GenerateCellularRules <- function(
     y <- GenerateIncidenceMatrix(
         exp.mat, method='percentile', 
         percentile.cutoff=GEN.INCIDENCE.MATRIX.PERCENTILE.CUTOFF)
-    y1 <- as(t(y), 'ngCMatrix')
+    y1 <- as(Matrix::t(y), 'ngCMatrix')
     txs <- as(y1, 'transactions')
 
     rules <- apriori(txs, 
@@ -545,6 +560,7 @@ GenerateCellularRules <- function(
 #'          steps with time constant tau
 #'
 #' @importFrom Matrix Diagonal
+#' @importFrom Matrix t
 #'
 #' @rdname ForecastStates
 #' @export ForecastStates
@@ -560,7 +576,7 @@ ForecastStates <- function(
     conf <- rules@quality$confidence
     R@x <- NewValsFromPVector(R@p, conf)
 
-    T <- RowScaleSparseMatrix(L %*% t(R))
+    T <- RowScaleSparseMatrix(L %*% Matrix::t(R))
     I <- as(Diagonal(nrow(L)), 'dgCMatrix')
     W <- RowScaleSparseMatrix(tau*T + (1-tau)*I)
     x <- RowScaleSparseMatrix(exp.mat)
@@ -585,6 +601,9 @@ ForecastStates <- function(
 #' @return a data frame with umap coordinates for the cells
 #'          and simulated states (x1,y1) -> (x2,y2) where each
 #'          row corresponds to a cell in the original dataset.
+#'
+#' @rdname ProjectSimUMAP
+#' @export ProjectSimUMAP
 #'
 ProjectSimUMAP <- function(
         exp.mat,
@@ -615,6 +634,10 @@ ProjectSimUMAP <- function(
 #' @importFrom nnet which.is.max
 #'
 #' @return vector of new ids
+#'
+#' @rdname GenerateMarkovChain
+#' @export GenerateMarkovChain
+#'
 GenerateMarkovChain <- function(
         ids,
         exp.mat,
