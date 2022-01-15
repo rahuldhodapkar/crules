@@ -17,6 +17,11 @@
 
 library(splatter) # BiocManager::install("splatter")
 library(scater)
+library(hashmap)
+library(FNN)
+library(crules)
+library(arules)
+library(markovchain)
 
 set.seed(1)
 
@@ -37,7 +42,18 @@ rules <- GenerateCellularRules(
         sparse.count.data,
         min.support = 0, min.conf = 0.25, max.rule.len = 2)
 
-trans.mat.list <- list()
+# generate markov chain
+step2id <- hashmap(c(1:25,
+          26:50,
+          51:75,
+          76:100),
+        c(rep('g1', 25),
+          rep('g2', 25),
+          rep('g3', 25),
+          rep('g4', 25)))
+ids <- step2id[[sim.paths$Step]]
+
+sigma.list <- list()
 for (i in 1:25) {
     print(i)
     xprime <- ForecastStates(
@@ -45,39 +61,19 @@ for (i in 1:25) {
         tau=0.2, n.sim.steps = i
     )
 
-    umap.df <- ProjectSimUMAP(sparse.normed.data,xprime)
-    umap.df$Step <- sim.paths$Step
+    sigma <- GenerateMarkovChain(ids,sparse.normed.data,xprime)
 
-    ggplot(umap.df, aes(
-            x=x1, y=y1,
-            xend=x2, yend=y2,
-            color=Step)) +
-        geom_point(alpha = 0.5) +
-        geom_segment(
-            arrow = arrow(length = unit(0.1,"cm")),
-            size = 0.6,
-            alpha = 0.4)
-
-    # generate markov chain
-    step2id <- hashmap(c(1:25,
-              26:50,
-              51:75,
-              76:100),
-            c(rep('g1', 25),
-              rep('g2', 25),
-              rep('g3', 25),
-              rep('g4', 25)))
-    ids <- step2id[[sim.paths$Step]]
-
-    trans.mat <- GenerateMarkovChain(ids,sparse.normed.data,xprime)
-
-    trans.mat.list[[i]] <- trans.mat
+    sigma.list[[i]] <- sigma
 }
+
+markov.trace <- matrix('', ncol=26, nrow=length(ids))
+markov.trace[,1] <- ids
+for (i in 1:25) {
+    markov.trace[,i+1] <- sigma.list[[i]]
+}
+
+# fit markov chain to transitions
+
+markov.chain.fit <- markovchainFit(markov.trace)
 
 print("All done!")
-
-for(i in 1:25) {
-    print(i)
-    print(trans.mat.list[[i]])
-}
-
