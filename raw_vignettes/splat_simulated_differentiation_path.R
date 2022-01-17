@@ -39,8 +39,8 @@ sparse.count.data <- as(t(sim.paths@assays@data$counts), 'dgCMatrix')
 sparse.normed.data <- RowScaleSparseMatrix(sparse.count.data)
 
 rules <- GenerateCellularRules(
-        sparse.count.data,
-        min.support = 0, min.conf = 0.25, max.rule.len = 2)
+        sparse.count.data, arm.algorithm='apriori',
+        supp=0,conf=20, zmax=2)
 
 # generate markov chain
 step2id <- hashmap(c(1:25,

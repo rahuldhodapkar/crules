@@ -510,11 +510,13 @@ WalkCellState <- function(x, W, nsteps=5) {
 #'
 #' @param exp.mat a cell (row) by gene (column) expression matrix
 #'                 of class 'ngCMatrix'
-#' @param min.support default 0, passed to apriori algorithm
-#' @param min.conf default 0.25, passed to apriori algorithm
-#' @param max.rule.len default 4, passed to apriori algorithm
+#' @param arm.algorithm algorithm used for frequent itemset mining,
+#'                       supports 'apriori' (default) and 'eclat'.
+#' @param supp Default 0, minimum support to pass to arm.algorithm in [0,100]
+#' @param conf Default 40, minimum confidence to pass to arm.algorithm in [0,100]
+#' @param ... additional parameters to pass for rule mining
 #'
-#' @importFrom arules apriori
+#' @importFrom arules fim4r
 #' @importFrom Matrix t
 #'
 #' @return a rules object generated from the single cell data
@@ -524,7 +526,19 @@ WalkCellState <- function(x, W, nsteps=5) {
 #'
 GenerateCellularRules <- function(
     exp.mat,
-    min.support = 0, min.conf = 0.25, max.rule.len = 4) {
+    arm.algorithm = 'apriori',
+    supp = 0,
+    conf = 40,
+    ...) {
+    # input validation
+    if (!arm.algorithm %in% c('apriori', 'eclat', 'fpgrowth')) {
+        stop(paste0(
+            'ERROR: GenerateCellularRules - unsupported `arm.algorithm`="',
+            arm.algorithm, '" passed.'))
+    }
+
+    args <- list(...)
+
     # non-tunable params
     GEN.INCIDENCE.MATRIX.PERCENTILE.CUTOFF <- 0.99
 
@@ -535,15 +549,15 @@ GenerateCellularRules <- function(
     y1 <- as(Matrix::t(y), 'ngCMatrix')
     txs <- as(y1, 'transactions')
 
-    rules <- apriori(txs, 
-        parameter=list(
-            supp=min.support, 
-            conf=min.conf,
-            maxlen=max.rule.len),
-        control=list(
-            memopt=TRUE,
-            load=FALSE
-        ))
+    rules <- fim4r(
+        transactions = txs,
+        method = arm.algorithm,
+        target = 'rules',
+        supp = supp,
+        conf = conf,
+        ...
+    )
+
     return(rules)
 }
 

@@ -6,20 +6,24 @@
 \usage{
 GenerateCellularRules(
   exp.mat,
-  min.support = 0,
-  min.conf = 0.25,
-  max.rule.len = 4
+  arm.algorithm = "apriori",
+  supp = 0,
+  conf = 40,
+  ...
 )
 }
 \arguments{
 \item{exp.mat}{a cell (row) by gene (column) expression matrix
 of class 'ngCMatrix'}
 
-\item{min.support}{default 0, passed to apriori algorithm}
+\item{arm.algorithm}{algorithm used for frequent itemset mining,
+supports 'apriori' (default) and 'eclat'.}
 
-\item{min.conf}{default 0.25, passed to apriori algorithm}
+\item{supp}{Default 0, minimum support to pass to arm.algorithm in [0,100]}
 
-\item{max.rule.len}{default 4, passed to apriori algorithm}
+\item{conf}{Default 40, minimum confidence to pass to arm.algorithm in [0,100]}
+
+\item{...}{additional parameters to pass for rule mining}
 }
 \value{
 a rules object generated from the single cell data
