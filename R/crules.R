@@ -561,6 +561,29 @@ GenerateCellularRules <- function(
     return(rules)
 }
 
+#' Creates a walk matrix from a set of rules.
+#'
+#' @param rules a rules object
+#' @param tau defualt 0.2. Time constant for the walk matrix, in [0,1].
+#'
+#' @importFrom Matrix t
+#'
+#' @return a gene x gene walk matrix W.
+GenerateWalkMatrix <- function(
+        rules,
+        tau = 0.2
+    ) {
+    L <- as(rules@lhs@data, 'dgCMatrix')
+    R <- as(rules@rhs@data, 'dgCMatrix')
+    conf <- rules@quality$confidence
+    R@x <- NewValsFromPVector(R@p, conf)
+
+    T <- RowScaleSparseMatrix(L %*% Matrix::t(R))
+    I <- as(Diagonal(nrow(L)), 'dgCMatrix')
+    W <- RowScaleSparseMatrix(tau*T + (1-tau)*I)
+    return(W)
+}
+
 #' Predict cell state transition graph using data simulated using
 #' association rules, weighted by rule confidence.
 #'
@@ -585,16 +608,9 @@ ForecastStates <- function(
         tau = 0.2,
         n.sim.steps = 5
     ) {
-    L <- as(rules@lhs@data, 'dgCMatrix')
-    R <- as(rules@rhs@data, 'dgCMatrix')
-    conf <- rules@quality$confidence
-    R@x <- NewValsFromPVector(R@p, conf)
 
-    T <- RowScaleSparseMatrix(L %*% Matrix::t(R))
-    I <- as(Diagonal(nrow(L)), 'dgCMatrix')
-    W <- RowScaleSparseMatrix(tau*T + (1-tau)*I)
+    W <- GenerateWalkMatrix(rules, tau)
     x <- RowScaleSparseMatrix(exp.mat)
-
     xprime <- WalkCellState(x, W, nsteps=n.sim.steps)
 
     return(xprime)
@@ -649,10 +665,10 @@ ProjectSimUMAP <- function(
 #'
 #' @return vector of new ids
 #'
-#' @rdname GenerateMarkovChain
-#' @export GenerateMarkovChain
+#' @rdname InferSimulatedCellStates
+#' @export InferSimulatedCellStates
 #'
-GenerateMarkovChain <- function(
+InferSimulatedCellStates <- function(
         ids,
         exp.mat,
         x.prime
@@ -675,4 +691,53 @@ GenerateMarkovChain <- function(
 
     sigma <- sapply(1:nrow(vals), function(i){getmode(vals[i,])})
     return(sigma)
+}
+
+#' Generate Markov trace for simulation of `exp.mat` on the provided set of `rules`
+#' with time constant tau and for n.sim.steps steps.
+#'
+#' @param ids a vector of cell identities (e.g. cluster ids, cell types)
+#' @param exp.mat a cell (row) by gene (column) expression matrix
+#'                 of class 'ngCMatrix'
+#' @param rules a rules object
+#' @param tau time constant for simulation
+#' @param n.sim.steps total number of simulation steps to run.
+#'
+#' @return a (cell x sim step) matrix capturing cell states at each step of the
+#'          simulation for fitting to a markov model.
+#'
+#' @importFrom utils txtProgressBar
+#' @importFrom utils setTxtProgressBar
+#'
+#' @rdname GenerateMarkovTrace
+#' @export GenerateMarkovTrace
+#'
+GenerateMarkovTrace <- function(
+        ids,
+        exp.mat,
+        rules,
+        tau = 0.2,
+        n.sim.steps = 5
+    ) {
+
+    W <- GenerateWalkMatrix(rules, tau)
+    xprime <- RowScaleSparseMatrix(exp.mat)
+
+    pb <- txtProgressBar(min = 0,
+    label = "Running cell state simulation",
+    max = n.sim.steps,
+    style = 3)
+
+
+    markov.trace <- matrix('', ncol=n.sim.steps + 1, nrow=length(ids))
+    markov.trace[,1] <- ids
+    for (i in 1:n.sim.steps) {
+
+        xprime <- xprime %*% W
+        markov.trace[,i+1] <- InferSimulatedCellStates(ids, exp.mat, xprime)
+
+        setTxtProgressBar(pb, i)
+    }
+
+    return(markov.trace)
 }

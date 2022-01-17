@@ -53,26 +53,9 @@ step2id <- hashmap(c(1:25,
           rep('g4', 25)))
 ids <- step2id[[sim.paths$Step]]
 
-sigma.list <- list()
-for (i in 1:25) {
-    print(i)
-    xprime <- ForecastStates(
-        sparse.count.data, rules,
-        tau=0.2, n.sim.steps = i
-    )
-
-    sigma <- GenerateMarkovChain(ids,sparse.normed.data,xprime)
-
-    sigma.list[[i]] <- sigma
-}
-
-markov.trace <- matrix('', ncol=26, nrow=length(ids))
-markov.trace[,1] <- ids
-for (i in 1:25) {
-    markov.trace[,i+1] <- sigma.list[[i]]
-}
-
-# fit markov chain to transitions
+markov.trace <- GenerateMarkovTrace(
+        ids, sparse.count.data, rules,
+        tau= 0.2, n.sim.steps = 25)
 
 markov.chain.fit <- markovchainFit(markov.trace)
 
