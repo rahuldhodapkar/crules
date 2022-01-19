@@ -673,7 +673,11 @@ InferSimulatedCellStates <- function(
         exp.mat,
         x.prime
     ) {
-    knn.G <- get.knnx(exp.mat, x.prime, algorithm='kd_tree')
+    knn.G <- get.knnx(
+        exp.mat,
+        x.prime,
+        k=10,
+        algorithm='kd_tree')
     ix2ident <- hashmap(
         1:length(ids), 
         ids)
@@ -686,7 +690,7 @@ InferSimulatedCellStates <- function(
 
     getmode <- function(v) {
         uniqv <- unique(v)
-        uniqv[which.is.max(tabulate(match(v, uniqv)))]
+        uniqv[nnet::which.is.max(tabulate(match(v, uniqv)))]
     }
 
     sigma <- sapply(1:nrow(vals), function(i){getmode(vals[i,])})
@@ -720,8 +724,9 @@ GenerateMarkovTrace <- function(
         n.sim.steps = 5
     ) {
 
+    x0 <- RowScaleSparseMatrix(exp.mat)
+    x.prime <- x0
     W <- GenerateWalkMatrix(rules, tau)
-    xprime <- RowScaleSparseMatrix(exp.mat)
 
     pb <- txtProgressBar(min = 0,
     label = "Running cell state simulation",
@@ -732,9 +737,8 @@ GenerateMarkovTrace <- function(
     markov.trace <- matrix('', ncol=n.sim.steps + 1, nrow=length(ids))
     markov.trace[,1] <- ids
     for (i in 1:n.sim.steps) {
-
-        xprime <- xprime %*% W
-        markov.trace[,i+1] <- InferSimulatedCellStates(ids, exp.mat, xprime)
+        x.prime <- x.prime %*% W
+        markov.trace[,i+1] <- InferSimulatedCellStates(ids, x0, x.prime)
 
         setTxtProgressBar(pb, i)
     }

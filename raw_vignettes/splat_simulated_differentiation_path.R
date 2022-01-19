@@ -40,7 +40,7 @@ sparse.normed.data <- RowScaleSparseMatrix(sparse.count.data)
 
 rules <- GenerateCellularRules(
         sparse.count.data, arm.algorithm='apriori',
-        supp=0,conf=20, zmax=2)
+        supp=0,conf=25, zmax=2)
 
 # generate markov chain
 step2id <- hashmap(c(1:25,
