@@ -24,7 +24,6 @@ Imports:
     nnet,
     markovchain,
     FNN,
-    hashmap,
     umap
 Suggests:
     testthat

@@ -660,7 +660,6 @@ ProjectSimUMAP <- function(
 #' @param x.prime predicted expression data (E^t)
 #'
 #' @importFrom FNN get.knnx
-#' @importFrom hashmap hashmap
 #' @importFrom nnet which.is.max
 #'
 #' @return vector of new ids
@@ -678,12 +677,9 @@ InferSimulatedCellStates <- function(
         x.prime,
         k=10,
         algorithm='kd_tree')
-    ix2ident <- hashmap(
-        1:length(ids), 
-        ids)
     
     vals <- matrix(
-        ix2ident[[knn.G$nn.index[,2:10]]],
+        ids[knn.G$nn.index[,2:10]],
         nrow=nrow(knn.G$nn.index)
     )
     rownames(vals) <- ids
