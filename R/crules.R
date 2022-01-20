@@ -516,7 +516,7 @@ WalkCellState <- function(x, W, nsteps=5) {
 #' @param conf Default 40, minimum confidence to pass to arm.algorithm in [0,100]
 #' @param ... additional parameters to pass for rule mining
 #'
-#' @importFrom arules fim4r
+#' @importFrom arules apriori
 #' @importFrom Matrix t
 #'
 #' @return a rules object generated from the single cell data
@@ -549,14 +549,19 @@ GenerateCellularRules <- function(
     y1 <- as(Matrix::t(y), 'ngCMatrix')
     txs <- as(y1, 'transactions')
 
-    rules <- fim4r(
-        transactions = txs,
-        method = arm.algorithm,
-        target = 'rules',
-        supp = supp,
-        conf = conf,
-        ...
-    )
+    if (arm.algorithm == 'apriori') {
+        rules <- apriori(txs, 
+            parameter=list(
+                supp=supp / 100, 
+                conf=conf / 100,
+                ...),
+            control=list(
+                memopt=TRUE,
+                load=FALSE
+        ))
+    } else if (arm.algorithm == 'eclat') {
+        stop('ERROR: GenerateCellularRules - eclat not yet implemented')
+    }
 
     return(rules)
 }
